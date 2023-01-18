@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Models\Lot;
-use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\DB;
+use App\Models\Category;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
-class LotController extends Controller
+
+class CategoryController extends Controller
 {
     /**
      * Display a listing of the resource.
@@ -17,15 +17,10 @@ class LotController extends Controller
      */
     public function index()
     {
-        if (isset($_GET['category_ids'])) {
-            $category_ids = explode(',', $_GET['category_ids']);
-            $lot_ids = DB::table('category_lots')->whereIn('category_id', $category_ids)->distinct()->pluck('lot_id');
-            $lots = Lot::whereIn('id', $lot_ids)->get();
-        } else {
-            $lots = Lot::all();
-        }
+        $categories = Category::all();
         return response()->json([
-            'data' => $lots,
+            'error' => false,
+            'data' => $categories,
         ]);
     }
 
@@ -47,43 +42,41 @@ class LotController extends Controller
      */
     public function store(Request $request)
     {
-        // return $request->all();
         $validator = Validator::make($request->all(), [
-            'name' => 'required',
-            'description' => 'required',
+            'name' => 'required|unique:categories,name'
         ]);
 
         if ($validator->fails()) {
             return  response()->json($validator->messages(), 400);
         };
 
-        $lot = Lot::create($request->all());
+        $category = Category::create($request->all());
         return response()->json([
-            'data' => $lot,
+            'data' => $category,
         ]);
     }
 
     /**
      * Display the specified resource.
      *
-     * @param  \App\Models\Lot  $lot
+     * @param  \App\Models\Category  $category
      * @return \Illuminate\Http\Response
      */
-    public function show(Lot $lot)
+    public function show(Category $category)
     {
-        $lot = Lot::where('id', $lot->id)->with('categories')->first();
+        $category = Category::where('id', $category->id)->with("lots")->first();
         return response()->json([
-            'data' => $lot,
+            'data' => $category,
         ]);
     }
 
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  \App\Models\Lot  $lot
+     * @param  \App\Models\Category  $category
      * @return \Illuminate\Http\Response
      */
-    public function edit(Lot $lot)
+    public function edit(Category $category)
     {
         //
     }
@@ -92,25 +85,30 @@ class LotController extends Controller
      * Update the specified resource in storage.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Models\Lot  $lot
+     * @param  \App\Models\Category  $category
      * @return \Illuminate\Http\Response
      */
-    public function update(Request $request, Lot $lot)
+    public function update(Request $request, Category $category)
     {
-        $lot->update($request->all());
+        $category->update($request->all());
+        if (filled($request->lot_id)) {
+            $category->lots()->sync($request->lot_id);
+        }
+        $category = Category::where('id', $category->id)->with("lots")->first();
+
         return response()->json([
-            'data' => $lot,
+            'data' => $category,
         ]);
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Models\Lot  $lot
+     * @param  \App\Models\Category  $category
      * @return \Illuminate\Http\Response
      */
-    public function destroy(Lot $lot)
+    public function destroy(Category $category)
     {
-        $lot->delete();
+        $category->delete();
     }
 }
